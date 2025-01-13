@@ -325,6 +325,8 @@ libvlccore_la_SOURCES = \
 	video_output/inhibit.c \
 	video_output/inhibit.h \
 	video_output/interlacing.c \
+	video_output/pic_buf.c \
+	video_output/pic_buf.h \
 	video_output/snapshot.c \
 	video_output/snapshot.h \
 	video_output/statistic.h \

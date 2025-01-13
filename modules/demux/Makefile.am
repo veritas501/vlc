@@ -178,6 +178,9 @@ libh26x_plugin_la_SOURCES = demux/mpeg/h26x.c \
 libh26x_plugin_la_LIBADD = $(LIBM)
 demux_LTLIBRARIES += libh26x_plugin.la
 
+libh264_demux_0latency_plugin_la_SOURCES = demux/mpeg/h264_0latency.c
+demux_LTLIBRARIES += libh264_demux_0latency_plugin.la
+
 libmkv_plugin_la_SOURCES = \
 	demux/mkv/util.hpp demux/mkv/util.cpp \
 	demux/mkv/dvd_types.hpp \

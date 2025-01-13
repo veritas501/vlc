@@ -75,6 +75,7 @@ static void             Destroy ( input_thread_t *p_input );
 static  int             Init    ( input_thread_t *p_input );
 static void             End     ( input_thread_t *p_input );
 static void             MainLoop( input_thread_t *p_input, bool b_interactive );
+static void MainLoop0Latency(input_thread_t *input);
 
 static inline int ControlPop( input_thread_t *, int *, input_control_param_t *, vlc_tick_t i_deadline, bool b_postpone_seek );
 static void       ControlRelease( int i_type, const input_control_param_t *p_param );
@@ -414,6 +415,8 @@ static input_thread_t *Create( vlc_object_t *p_parent,
     }
     priv->p_es_out = NULL;
 
+    priv->zero_latency = var_InheritBool(p_input, "0latency");
+
     return p_input;
 }
 
@@ -465,14 +468,19 @@ static void *Run( void *data )
 
     if( !Init( p_input ) )
     {
-        if( priv->master->b_can_pace_control && priv->b_out_pace_control )
+        if (priv->zero_latency)
+            MainLoop0Latency(p_input);
+        else
         {
-            /* We don't want a high input priority here or we'll
-             * end-up sucking up all the CPU time */
-            vlc_set_priority( priv->thread, VLC_THREAD_PRIORITY_LOW );
-        }
+            if( priv->master->b_can_pace_control && priv->b_out_pace_control )
+            {
+                /* We don't want a high input priority here or we'll
+                 * end-up sucking up all the CPU time */
+                vlc_set_priority( priv->thread, VLC_THREAD_PRIORITY_LOW );
+            }
 
-        MainLoop( p_input, true ); /* FIXME it can be wrong (like with VLM) */
+            MainLoop( p_input, true ); /* FIXME it can be wrong (like with VLM) */
+        }
 
         /* Clean up */
         End( p_input );
@@ -648,6 +656,27 @@ static void MainLoopStatistics( input_thread_t *p_input )
     vlc_mutex_unlock( &priv->p_item->lock );
 
     input_SendEventStatistics( p_input, &new_stats );
+}
+
+static void MainLoop0Latency(input_thread_t *input)
+{
+    demux_t *demux = input_priv(input)->master->p_demux;
+    if (!demux || !demux->pf_demux)
+    {
+        msg_Err(input, "Could not use --0latency on non-demuxable stream");
+        return;
+    }
+
+    while (!input_Stopped(input) && input_priv(input)->i_state != ERROR_S)
+    {
+        int ret = demux->pf_demux(demux);
+        if (ret != VLC_DEMUXER_SUCCESS)
+        {
+            if (ret != VLC_DEMUXER_EOF)
+                msg_Err(input, "Demux failed %d", ret);
+            break;
+        }
+    }
 }
 
 /**

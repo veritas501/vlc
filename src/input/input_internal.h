@@ -466,6 +466,8 @@ typedef struct input_thread_private_t
 {
     struct input_thread_t input;
 
+    bool zero_latency;
+
     input_thread_events_cb events_cb;
     void *events_data;
 

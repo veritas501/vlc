@@ -1974,6 +1974,9 @@ vlc_module_begin ()
 
     add_string( "input-title-format", "$Z", INPUT_TITLE_FORMAT_TEXT, INPUT_TITLE_FORMAT_LONGTEXT );
 
+    /* Impacts input, decoder, and vout */
+    add_bool( "0latency", false, NULL, NULL );
+
 /* Decoder options */
     add_category_hint(N_("Input access and codecs"), CODEC_CAT_LONGTEXT)
 

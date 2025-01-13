@@ -61,12 +61,16 @@
 #include "statistic.h"
 #include "chrono.h"
 #include "control.h"
+#include "pic_buf.h"
 
 typedef struct vout_thread_sys_t
 {
     struct vout_thread_t obj;
 
     vout_thread_private_t private;
+
+    bool zero_latency;
+    struct vlc_pic_buf pic_buf;
 
     bool dummy;
 
@@ -375,8 +379,13 @@ void vout_PutPicture(vout_thread_t *vout, picture_t *picture)
     vout_thread_sys_t *sys = VOUT_THREAD_TO_SYS(vout);
     assert(!sys->dummy);
     assert( !picture_HasChainedPics( picture ) );
-    picture_fifo_Push(sys->decoder_fifo, picture);
-    vout_control_Wake(&sys->control);
+
+    if (sys->zero_latency) {
+        vlc_pic_buf_Push(&sys->pic_buf, picture);
+    } else {
+        picture_fifo_Push(sys->decoder_fifo, picture);
+        vout_control_Wake(&sys->control);
+    }
 }
 
 /* */
@@ -1681,6 +1690,10 @@ static int vout_Start(vout_thread_sys_t *vout, vlc_video_context *vctx, const vo
     sys->spu_blend_chroma        = 0;
     sys->spu_blend               = NULL;
 
+    sys->zero_latency = var_InheritBool(&vout->obj, "0latency");
+    if (sys->zero_latency)
+        vlc_pic_buf_Init(&sys->pic_buf);
+
     video_format_Print(VLC_OBJECT(&vout->obj), "original format", &sys->original);
     return VLC_SUCCESS;
 error:
@@ -1705,6 +1718,29 @@ error:
     return VLC_EGENERIC;
 }
 
+static void Thread0Latency(vout_thread_sys_t *sys)
+{
+    vout_display_t *vd = sys->display;
+
+    for (;;)
+    {
+        picture_t *pic = vlc_pic_buf_Pop(&sys->pic_buf);
+        if (!pic)
+            /* stopped */
+            break;
+
+        vlc_mutex_lock(&sys->display_lock);
+        if (vd->ops->prepare)
+            vd->ops->prepare(vd, pic, NULL, vlc_tick_now());
+
+        if (vd->ops->display)
+            vd->ops->display(vd, pic);
+        vlc_mutex_unlock(&sys->display_lock);
+
+        picture_Release(pic);
+    }
+}
+
 /*****************************************************************************
  * Thread: video output thread
  *****************************************************************************
@@ -1716,6 +1752,12 @@ static void *Thread(void *object)
 {
     vout_thread_sys_t *vout = object;
     vout_thread_sys_t *sys = vout;
+
+    if (sys->zero_latency)
+    {
+        Thread0Latency(sys);
+        return NULL;
+    }
 
     vlc_tick_t deadline = VLC_TICK_INVALID;
 
@@ -1800,7 +1842,11 @@ void vout_StopDisplay(vout_thread_t *vout)
 
     atomic_store(&sys->control_is_terminated, true);
     // wake up so it goes back to the loop that will detect the terminated state
-    vout_control_Wake(&sys->control);
+    if (sys->zero_latency) {
+        vlc_pic_buf_Stop(&sys->pic_buf);
+    } else {
+        vout_control_Wake(&sys->control);
+    }
     vlc_join(sys->thread, NULL);
 
     vout_ReleaseDisplay(sys);

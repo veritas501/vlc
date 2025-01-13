@@ -74,6 +74,8 @@ struct vlc_input_decoder_t
     const struct vlc_input_decoder_callbacks *cbs;
     void *cbs_userdata;
 
+    bool zero_latency;
+
     ssize_t          i_spu_channel;
     int64_t          i_spu_order;
 
@@ -1132,6 +1134,13 @@ static void ModuleThread_QueueVideo( decoder_t *p_dec, picture_t *p_pic )
         vlc_tracer_TraceStreamPTS( tracer, "DEC", p_owner->psz_id,
                             "OUT", p_pic->date );
     }
+
+    if (p_owner->zero_latency)
+    {
+        vout_PutPicture(p_owner->p_vout, p_pic);
+        return;
+    }
+
     int success = ModuleThread_PlayVideo( p_owner, p_pic );
 
     ModuleThread_UpdateStatVideo( p_owner, success != VLC_SUCCESS );
@@ -1868,6 +1877,8 @@ CreateDecoder( vlc_object_t *p_parent, const es_format_t *fmt,
         vlc_object_delete(p_dec);
         return NULL;
     }
+
+    p_owner->zero_latency = var_InheritBool(p_dec, "0latency");
 
     vlc_mutex_init( &p_owner->lock );
     vlc_mutex_init( &p_owner->mouse_lock );

@@ -67,6 +67,8 @@ typedef struct
     AVCodecContext *p_context;
     const AVCodec  *p_codec;
 
+    bool zero_latency;
+
     /* Video decoder specific part */
     date_t  pts; /* Protected by lock */
 
@@ -380,8 +382,10 @@ static int OpenVideoCodec( decoder_t *p_dec )
     p_sys->level = -1;
     cc_Init( &p_sys->cc );
 
+    p_sys->zero_latency = var_InheritBool(p_dec, "0latency");
+
     set_video_color_settings( &p_dec->fmt_in.video, ctx );
-    if( var_InheritBool(p_dec, "low-delay") ||
+    if( p_sys->zero_latency || var_InheritBool(p_dec, "low-delay") ||
       ( p_dec->fmt_in.video.i_frame_rate_base &&
         p_dec->fmt_in.video.i_frame_rate &&
         (double) p_dec->fmt_in.video.i_frame_rate /
@@ -553,7 +557,7 @@ int InitVideoDec( vlc_object_t *obj )
             break;
     }
 
-    if( var_InheritBool(p_dec, "low-delay") )
+    if( p_sys->zero_latency || var_InheritBool(p_dec, "low-delay") )
         p_context->thread_type &= ~FF_THREAD_FRAME;
 
     if( p_context->thread_type & FF_THREAD_FRAME )
@@ -632,6 +636,12 @@ static block_t * filter_earlydropped_blocks( decoder_t *p_dec, block_t *block )
 
     if( !block )
         return NULL;
+
+    if( p_sys->zero_latency)
+    {
+        p_sys->framedrop = FRAMEDROP_NONE;
+        return block;
+    }
 
     if( block->i_flags & BLOCK_FLAG_PREROLL )
     {

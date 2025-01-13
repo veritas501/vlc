@@ -3385,7 +3385,7 @@ static int EsOutVaControlLocked( es_out_t *out, input_source_t *source,
         {
             /* Last pcr/clock update was late. We need to compensate by offsetting
                from the clock the rendering dates */
-            if( i_late > 0 && ( !priv->p_sout ||
+            if( !input_priv(p_sys->p_input)->zero_latency && i_late > 0 && ( !priv->p_sout ||
                             !priv->b_out_pace_control ) )
             {
                 /* input_clock_GetJitter returns compound delay:
