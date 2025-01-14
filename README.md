@@ -17,6 +17,22 @@ The VideoLAN project was started at the university [École Centrale Paris](https
 relicensed VLC under the GPLv2 license in February 2001. Since then, VLC has
 been downloaded **billions** of times.
 
+## BUILD
+
+```
+git clone https://github.com/veritas501/vlc.git --depth 1
+
+mkdir vlc_build
+
+docker pull registry.videolan.org/vlc-debian-win64:20201106143728
+
+docker run -it -v $PWD/vlc_build:/dst -v $PWD/vlc:/src --user 0 --network host registry.videolan.org/vlc-debian-win64:20201106143728 bash -c "cd /dst; bash"
+
+root@localhost:/dst# /src/extras/package/win32/build.sh -a x86_64 -r -z -i u
+
+# release at /dst/win64/vlc-4.0.0-dev-win64-release.7z
+```
+
 ## License
 
 **VLC** is released under the GPLv2 *(or later)* license.
