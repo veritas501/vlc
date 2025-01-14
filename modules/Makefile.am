@@ -40,7 +40,6 @@ include meta_engine/Makefile.am
 include misc/Makefile.am
 include notify/Makefile.am
 include packetizer/Makefile.am
-include services_discovery/Makefile.am
 include spu/Makefile.am
 include stream_filter/Makefile.am
 include stream_extractor/Makefile.am

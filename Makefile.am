@@ -13,8 +13,7 @@ EXTRA_DIST = \
 	extras/include/x86/x86inc.asm \
 	extras/include/x86/x86util.asm \
 	extras/package/macosx/package.mak \
-	extras/package/win32/package.mak \
-	extras/package/npapi.am
+	extras/package/win32/package.mak
 
 dist_noinst_SCRIPTS = bootstrap
 nodist_noinst_SCRIPTS = compile

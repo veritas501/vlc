@@ -9,11 +9,6 @@ win32_debugdir=$(abs_top_builddir)/symbols-$(VERSION)
 7ZIP_OPTS=-t7z -m0=lzma -mx=9 -mfb=64 -md=32m -ms=on
 
 
-if HAVE_WIN32
-include extras/package/npapi.am
-
-build-npapi: package-win-install
-endif
 
 if HAVE_WIN64
 WINVERSION=vlc-$(VERSION)-win64
@@ -93,12 +88,7 @@ endif
 # Convert to DOS line endings
 	find $(win32_destdir) -type f \( -name "*xml" -or -name "*html" -or -name '*js' -or -name '*css' -or -name '*hosts' -or -iname '*txt' -or -name '*.cfg' -or -name '*.lua' \) -exec $(U2D) -q {} \;
 
-package-win-activex: build-npapi
-	cp "$(top_builddir)/npapi-vlc/installed/lib/axvlc.dll" "$(win32_destdir)/"
-	mkdir -p "$(win32_destdir)/sdk/activex/"
-	cp $(top_builddir)/npapi-vlc/activex/README.TXT $(top_builddir)/npapi-vlc/share/test/test.html $(win32_destdir)/sdk/activex/
-
-package-win-strip: package-win-common package-win-activex
+package-win-strip: package-win-common
 	mkdir -p "$(win32_debugdir)"/
 	find $(win32_destdir) -type f \( -name '*$(LIBEXT)' -or -name '*$(EXEEXT)' \) | while read i; \
 	do if test -n "$$i" ; then \
